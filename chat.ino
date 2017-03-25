@@ -1,19 +1,40 @@
 #include <Arduino.h>
 
-#include "defines.h"
+#define BAUD           4800
+#define MAX_CMD_LENGTH 128
+
+#define YELLOW  "\e[1;33m"
+#define RED     "\e[1;31m"
+#define NOCOLOR "\e[0m"
 
 void setup(void) {
     Serial.begin(BAUD);
 }
 
-const char *usage = \
-"\r\n\r\nUsage:\r\n\
-    led on      to light me up\r\n\
-    led off     to go to sleep...\r\n\n>>> ";
+///////////////
+// Menu actions
 
-void ledOn()  { analogWrite(5, 255); }
-void ledOff() { analogWrite(5, 0);   }
-void help()   { Serial.print(usage); }
+void ledOn()
+{
+    analogWrite(5, 255);
+}
+
+void ledOff()
+{
+    analogWrite(5, 0);
+}
+
+void showHelp()
+{
+    Serial.print(
+        "\r\n\r\nUsage:\r\n    "
+        YELLOW "led on" NOCOLOR "      to light me up\r\n    "
+        YELLOW "led off" NOCOLOR "     to go to sleep...\r\n");
+}
+
+
+//////////////////////////////////////////////
+// Gather the function pointers of the actions
 
 struct Cmd {
     const char *cmd;
@@ -21,9 +42,13 @@ struct Cmd {
 } cmds[] = {
     {"led on", ledOn},
     {"led off", ledOff},
-    {"help", help},
+    {"help", showHelp},
 };
 int maxCmdIdx = sizeof(cmds)/sizeof(cmds[0]);
+
+
+//////////////////////////////////////////////////////////////////
+// Read incoming command over serial while also handling backspace
 
 void get(char *cmd)
 {
@@ -46,7 +71,7 @@ void get(char *cmd)
     }
 }
 
-void getAndExecuteCommand()
+void loop()
 {
     int i;
     static char cmd[MAX_CMD_LENGTH];
@@ -55,25 +80,21 @@ void getAndExecuteCommand()
     get(cmd);
     for(i=0; i<maxCmdIdx; i++) {
         if (!strcmp(cmd, cmds[i].cmd)) {
-            Serial.print("\r\n\nExecuting command: '");
+            Serial.print("\r\n\nExecuting command: '" YELLOW);
             Serial.print(cmds[i].cmd);
-            Serial.print("'\r\n");
+            Serial.print(NOCOLOR "'\r\n");
             cmds[i].func();
             break;
         }
     }
     if (i == maxCmdIdx) {
-        Serial.print("\r\n\nCommand '");
+        Serial.print("\r\n\nCommand '" RED);
         Serial.print(cmd);
-        Serial.println("' is not recognized...\n\rAvailable commands are:\r\n");
+        Serial.println(NOCOLOR "' is not recognized...\n\rAvailable commands are:\r\n");
         for(i=0; i<maxCmdIdx; i++) {
-            Serial.print("    ");
+            Serial.print("    " YELLOW);
             Serial.print(cmds[i].cmd);
-            Serial.print("\r\n");
+            Serial.print(NOCOLOR "\r\n");
         }
     }
-}
-
-void loop(void) {
-    getAndExecuteCommand();
 }
